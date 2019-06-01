@@ -1,0 +1,443 @@
+<html>
+<head>
+    <title>NinjaMan</title>
+    <style type="text/css">
+        * {
+            margin: 0px;
+            padding: 0px;
+        }
+
+        .row {
+            line-height: 0px;
+        }
+
+        .wall {
+            background-color: blue;
+            height: 40px;
+            width: 40px;
+            display: inline-block;
+        }
+
+        .sushi {
+            background-color: black;
+            height: 40px;
+            width: 40px;
+            display: inline-block;
+            background-image: url("img/sushi.png");
+            background-size: contain;
+        }
+
+        .onigiri {
+            background-color: black;
+            height: 40px;
+            width: 40px;
+            display: inline-block;
+            background-image: url("img/onigiri.png");
+            background-size: contain;
+        }
+
+        .blank {
+            background-color: black;
+            height: 40px;
+            width: 40px;
+            display: inline-block;
+        }
+
+        #ninjaman {
+            background-color: black;
+            height: 40px;
+            width: 40px;
+            display: inline-block;
+            background-image: url("img/ninja.gif");
+            background-size: contain;
+            position: absolute;
+            left: 40px;
+            top: 40px;
+        }
+
+        #scoreboard {
+            background-color: black;
+            height: 30px;
+            width: 400px;
+            color: blue;
+            font-size: 28px;
+        }
+
+        #bluey {
+            /* visibility: hidden; */
+            background-color: black;
+            height: 40px;
+            width: 40px;
+            display: inline-block;
+            background-image: url("img/bluey.gif");
+            background-size: contain;
+            position: absolute;
+        }
+
+        #pinky {
+            /*visibility: hidden;*/
+            background-color: black;
+            height: 40px;
+            width: 40px;
+            display: inline-block;
+            background-image: url("img/pinky.gif");
+            background-size: contain;
+            position: absolute;
+        }
+
+        #pumpky {
+            /* visibility: hidden; */
+            background-color: black;
+            height: 40px;
+            width: 40px;
+            display: inline-block;
+            background-image: url("img/pumpky.gif");
+            background-size: contain;
+            position: absolute;
+        }
+
+        #red {
+            /* visibility: hidden; */
+            background-color: black;
+            height: 40px;
+            width: 40px;
+            display: inline-block;
+            background-image: url("img/red.gif");
+            background-size: contain;
+            position: absolute;
+        }
+
+        #scaredy {
+            /* visibility: hidden; */
+            background-color: black;
+            height: 40px;
+            width: 40px;
+            display: inline-block;
+            background-image: url("img/scaredy.png");
+            background-size: contain;
+            position: absolute;
+        }
+    </style>
+</head>
+<body>
+    <div id="world"></div>
+    <div id="ninjaman"></div>
+    <div id="scoreboard">Hello</div>
+    <div id="bluey"></div>
+    <div id="pinky"></div>
+    <div id="pumpky"></div>
+    <div id="red"></div>
+    <div id="scaredy"></div>
+</body>
+
+<script type="text/javascript">
+    var start_lives = 3, sushi_value = 5, onigiri_value = 10, world_size = 15, isSpawning = false;
+    var randomWorld = [];
+    var allGhosts = [];
+    function MyLocation(x, y) {
+        this.x = x;
+        this.y = y;
+    }
+    var MyDirection = {
+        l: 1,
+        u: 2,
+        r: 3,
+        d: 4
+    }
+    var ninjaman = {
+        loc: new MyLocation(1,1),
+        score: 0,
+        lives: start_lives
+    }
+    function Ghost(name) {
+        this.name = name;
+        this.loc = new MyLocation(0,0);
+        this.dir = randomIntFromInterval(1,4);
+        this.active = false;
+        this.turn = function() {
+            if (++this.dir > 4) this.dir = 1;
+        }
+    }
+    function randomIntFromInterval(min, max) {
+        return Math.floor(Math.random() * (max - min + 1) + min);
+    }
+    function randomizeWorld() {
+        randomWorld = [];
+        randomWorld.push(solidRow());
+        for (var row = 0; row < world_size - 2; row++) {    // world_size - 2 accounts for top/bottom rows
+            randomWorld.push(randomRow());
+        }
+        randomWorld.push(solidRow());
+    }
+    function solidRow() {
+        var retVal = [];
+        for (var i = 0; i < world_size; i++) {
+            retVal.push(1);
+        }
+        return retVal;
+    }
+    function randomRow() {
+        var retVal = [];
+        retVal.push(1);
+        for (var i = 0; i < world_size - 2; i++) {  // world_size - 2 accounts for a wall <div> on each side
+            retVal.push(randomIntFromInterval(0, 3));
+        }
+        retVal.push(1);
+        return retVal;
+    }
+    var worldDict = {
+        0: 'blank',
+        1: 'wall',
+        2: 'sushi',
+        3: 'onigiri'
+    }
+    function drawRandomWorld() {
+        var output = "";
+        for (var row = 0; row < randomWorld.length; row++) {
+            output += "<div class='row'>";
+            for (var x = 0; x < randomWorld[row].length; x++) {
+                output += "<div class=" + worldDict[randomWorld[row][x]] + "></div>";
+            }
+            output += "</div>";
+        }
+        document.getElementById("world").innerHTML = output;
+        drawScore();
+    }
+    function drawNinjaMan() {
+        document.getElementById("ninjaman").style.left = ninjaman.loc.x * 40 + "px";
+        document.getElementById("ninjaman").style.top = ninjaman.loc.y * 40 + "px";
+    }
+    document.onkeydown = function (e) {
+        if (e.keyCode == 37) { // LEFT
+            var location = previewMove(MyDirection.l, ninjaman.loc);
+            if (location == 1) return;
+            if (location == 2) {
+                ninjaman.score += sushi_value;
+            }
+            if (location == 3) {
+                ninjaman.score += onigiri_value;
+            }
+            ninjaman.loc.x--;
+        }
+        else if (e.keyCode == 39) { // RIGHT
+            var location = previewMove(MyDirection.r, ninjaman.loc);
+            if (location == 1) return;
+            if (location == 2) {
+                ninjaman.score += sushi_value;
+            }
+            if (location == 3) {
+                ninjaman.score += onigiri_value;
+            }
+            ninjaman.loc.x++;
+        }
+        else if (e.keyCode == 40) { // DOWN
+            var location = previewMove(MyDirection.d, ninjaman.loc);
+            if (location == 1) return;
+            if (location == 2) {
+                ninjaman.score += sushi_value;
+            }
+            if (location == 3) {
+                ninjaman.score += onigiri_value;
+            }
+            ninjaman.loc.y++;
+        }
+        else if (e.keyCode == 38) { // UP
+            var location = previewMove(MyDirection.u, ninjaman.loc);
+            if (location == 1) return
+            if (location == 2) {
+                ninjaman.score += sushi_value;
+            }
+            if (location == 3) {
+                ninjaman.score += onigiri_value;
+            }
+            ninjaman.loc.y--;
+        }
+        randomWorld[ninjaman.loc.y][ninjaman.loc.x] = 0;
+        checkForSpawn();
+        drawRandomWorld();
+        drawNinjaMan();
+        if (chcekNinjaCollision()) deadNinja();
+    }
+    function chcekNinjaCollision() {
+        for (var x = 0; x < allGhosts.length; x++) {
+            var g = allGhosts[x];
+            if (checkCollision(g))
+                return true;
+        }
+    }
+    function drawScore() {
+        var score_display = " Score: " + ninjaman.score + "            Lives: " + ninjaman.lives;
+        document.getElementById("scoreboard").textContent = score_display;
+    }
+    function checkForSpawn() {
+        if (ninjaman.score > 0 && !(ninjaman.score % 50)) {
+            if (!isSpawning) {
+                isSpawning = true;
+                initGhosts();
+                updateGhosts();
+            }
+            spawnGhost();
+        }
+    }
+    function previewMove(dir, loc) {
+        var x = loc.x;
+        var y = loc.y;
+        switch (dir) {
+            case MyDirection.l:
+                x--;
+                break;
+            case MyDirection.u:
+                y--;
+                break;
+            case MyDirection.r:
+                x++;
+                break;
+            case MyDirection.d:
+                y++;
+                break;
+        }
+        return randomWorld[y][x];
+    }
+    function gameOver() {
+        alert("gameOver");
+        newGame();
+    }
+    function deadNinja() {
+        if (--ninjaman.lives < 1)
+            gameOver();
+        else {
+            alert("You Lost a life!");
+            reset();
+        }
+    }
+    function initGhosts() {
+        allGhosts = [
+            new Ghost("bluey"),
+            new Ghost("pinky"),
+            new Ghost("pumpky"),
+            new Ghost("red"),
+            new Ghost("scaredy")
+        ]
+    }
+    function checkCollision(ghost) {
+        var retVal = false;
+        if (ghost.loc.x == ninjaman.loc.x && ghost.loc.y == ninjaman.loc.y) {
+            retVal = true;
+        }
+        return retVal;
+    }
+    function targetNinja(ghost) {
+        if(ghost.loc.x > ninjaman.loc.x) {
+            ghost.dir = MyDirection.l;
+            if (previewMove(ghost.dir, ghost.loc) != 1)
+            return;
+        }
+        if(ghost.loc.y > ninjaman.loc.Y) {
+            ghost.dir = MyDirection.u;
+            if (previewMove(ghost.dir, ghost.loc) != 1)
+            return;
+        }
+        if(ghost.loc.x < ninjaman.loc.x) {
+            ghost.dir = MyDirection.r;
+            if (previewMove(ghost.dir, ghost.loc) != 1)
+            return;
+        }
+        if(ghost.loc.y < ninjaman.loc.y) {
+            ghost.dir = MyDirection.d;
+            if (previewMove(ghost.dir, ghost.loc) != 1)
+            return;
+        }
+    }
+    function moveGhost(ghost) {
+        targetNinja(ghost);
+        if (previewMove(ghost.dir, ghost.loc) == 1) {
+            ghost.turn();
+            if (previewMove(ghost.dir, ghost.loc) == 1) {
+                ghost.turn();
+                if (previewMove(ghost.dir, ghost.loc) == 1) {
+                    ghost.turn();
+                    if (previewMove(ghost.dir, ghost.loc) == 1) {
+                        ghost.active = false;
+                        return;
+                    }
+                }
+            }
+        }
+        switch(ghost.dir) {
+            case MyDirection.l:
+                ghost.loc.x--;
+                break;
+            case MyDirection.u:
+                ghost.loc.y--;
+                break;
+            case MyDirection.r:
+                ghost.loc.x++;
+                break;
+            case MyDirection.d:
+                ghost.loc.y++;
+                break;
+        }
+        return checkCollision(ghost);
+    }
+    function drawGhosts() {
+        MyLog(allGhosts[1]);
+        for (var x = 0; x < allGhosts.length; x++) {
+            var g = allGhosts[x];
+            document.getElementById(g.name).style.left = g.loc.x * 40 + "px";
+            document.getElementById(g.name).style.top = g.loc.y * 40 + "px";
+        }
+    }
+    function updateGhosts() {
+        MyLog("updateGhosts");
+        var hit = false;
+        for (var x = 0; x < allGhosts.length; x++) {
+            var g = allGhosts[x];
+            if (g.active) {
+                hit = moveGhost(g);
+                if (hit) deadNinja();
+            }
+        }
+        drawGhosts();
+        setTimeout(updateGhosts, 1000);
+    }
+    function getValidSpawnLocation() {
+        var result = 1, x, y;
+        while(result == 1) {
+            x = randomIntFromInterval(1, world_size - 2) + 1;
+            y = randomIntFromInterval(1, world_size - 2) + 1;
+            result = randomWorld[y][x];
+        }
+        return new MyLocation(x, y);
+    }
+    function spawnGhost() {
+        MyLog("spawnGhost");
+        for (var x = 0; x < allGhosts.length; x++) {
+            var g = allGhosts[x];
+            if (!g.active) {
+                g.active = true;
+                g.loc = getValidSpawnLocation();
+                break;
+            }
+        }
+        //setTimeout(spawnGhost, 1000);
+    }
+    function startUpdatingGhosts(){
+        updateGhosts();
+    }
+    function MyLog(where) {
+        console.log(where)
+    }
+    function newGame() {
+        randomizeWorld();
+        ninjaman.lives = start_lives;
+        //isSpawning = false;
+        reset();
+    }
+    function reset() {
+        drawRandomWorld();
+    }
+    //////////////////////////////////
+    newGame();
+</script>
+
+</html>
